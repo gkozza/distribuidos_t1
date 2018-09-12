@@ -18,6 +18,10 @@ import java.net.UnknownHostException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.ArrayList;
+
+
+import java.util.Arrays;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +29,13 @@ import java.util.Map.Entry;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javax.xml.bind.DatatypeConverter;
+
+import java.time.Instant;
+import java.util.Date;
+
+
 
 /**
  *
@@ -43,6 +53,16 @@ public class MulticastAp {
         for(int i = 0; i < buffer.length; i++){
             buffer[i] = 0;
         }
+    }
+
+    public static void menu(){
+        System.out.println("///////////");
+        System.out.println("1 - Recurso 1");
+        System.out.println("2 - Recurso 2");
+        System.out.println("3 - Nao fazer nada");
+        System.out.println("4 - sair");
+        System.out.println("///////////");
+       
     }
     
     public static byte[] serialize(Object obj) throws IOException{
@@ -100,9 +120,6 @@ public class MulticastAp {
         return messageOut;
     } 
     
-    /**
-     * @param args the command line arguments
-     */
     public static void main(String[] args) throws UnknownHostException, IOException, ClassNotFoundException {
                 
 
@@ -110,11 +127,25 @@ public class MulticastAp {
 		MulticastSocket s =null;
 		try {			
                         InetAddress group = InetAddress.getByName("228.5.6.7");
+
                         String estado = "REALEASED";                        
                         Boolean achou = false;
+
+                        String estado_rec1 = "RELEASED";                        
+                        String estado_rec2 = "RELEASED";
+                        
+                        Boolean sair = false;                        
+                        Boolean inicio = false;
+                        Boolean rec1_uso = false;
+                        ArrayList<String> fila_rc1 = new ArrayList<>();
+                        ArrayList<String> fila_rc2 = new ArrayList<>();
+                        System.out.println("Bem-vindo, por favor informe seu nome para login");
+
                         Scanner reader = new Scanner(System.in); 
                         nome = reader.next();
                         List<String> online = new ArrayList<String>();
+                        
+
                         
 
                 //create HashMap para troca de mensagem
@@ -124,6 +155,18 @@ public class MulticastAp {
                 // 4 - Sair do Chat
                         HashMap<Integer, HashMap<String, PublicKey>> mapPlayer = new HashMap<Integer,HashMap<String,PublicKey>>();
                         
+
+                //hashMap para controle da RC de cada Recurso, KEY, ESTADO, TEMPO
+                //1 - RELEASED
+                //2 - WANTED
+                //3 - HELD
+                        
+                        HashMap<String, List<Integer>> rc_rec1 = new HashMap<>();
+                        
+                        HashMap<String, List<Integer>> rc_rec2 = new HashMap<>();
+                        
+                        
+
                         
                         // Entrar no grupo multicast
                         s = new MulticastSocket(6789);
@@ -146,42 +189,106 @@ public class MulticastAp {
                             
                             try{
                                 obj = deserialize(messageIn.getData());
+
                                 System.out.println("MAP: " + obj.toString());
+//                                if(obj instanceof HashMap){                           
+//                                    HashMap map = (HashMap) obj;
+//                                        if(map.containsKey(1)){
+//                                           // Receber informações de alguém que entrou no servidor  
+//                                            HashMap<String,PublicKey> map2 = (HashMap<String,PublicKey>) map.get(1);
+//                                            String client_name = (String)parseHashMsg(1,map2);
+//                                            PublicKey keyPublic = (PublicKey)parseHashMsg(2,map2);
+//                                            nome_chave.put(client_name, keyPublic);
+//                                            System.out.println(client_name + " entrou");
+//                                            //prepara informações para enviar as minhas informações para o grupo para todos terem
+//                                            mapPlayer.put(2, getMyInfo());
+//                                            online.add(client_name);
+//                                            byte[] msgVolta = serialize(mapPlayer);
+//                                            s.send(getDatagram(msgVolta, group));
+//                                        }
+//                                        
+//                                        if(map.containsKey(2)){
+//                                            System.out.println("VOlta: ");
+//
+//                                //System.out.println("MAP: " + obj.toString());
+                                
                                 if(obj instanceof HashMap){                           
                                     HashMap map = (HashMap) obj;
-                                        if(map.containsKey(1)){
-                                           // Receber informações de alguém que entrou no servidor  
-                                            HashMap<String,PublicKey> map2 = (HashMap<String,PublicKey>) map.get(1);
-                                            String client_name = (String)parseHashMsg(1,map2);
-                                            PublicKey keyPublic = (PublicKey)parseHashMsg(2,map2);
-                                            nome_chave.put(client_name, keyPublic);
-                                            System.out.println(client_name + " entrou");
-                                            //prepara informações para enviar as minhas informações para o grupo para todos terem
-                                            mapPlayer.put(2, getMyInfo());
-                                            online.add(client_name);
-                                            byte[] msgVolta = serialize(mapPlayer);
-                                            s.send(getDatagram(msgVolta, group));
+                                        if(map.containsKey(6)){
+                                            System.out.println("Recurso 2");
+                                            HashMap<String,PublicKey> map2 = (HashMap<String,PublicKey>) map.get(6);
+                                            String client_name = (String)parseHashMsg(1,map2);       
+                                            
+                                            Date date= new Date();
+                                            int indicacao_tempo_rc2 = (int) date.getTime();
+                                            rc_rec2.put(client_name, Arrays.asList(2,indicacao_tempo_rc2));
+                                            int h = 0;
+                                            for(Map.Entry<String, List<Integer>> entry: rc_rec2.entrySet()) {
+                                                if(!client_name.equals(entry.getKey())){
+                                                    if(entry.getValue().get(h).equals(3)){
+                                                        System.out.println("O recurso 2 ja esta sendo usado por " + entry.getKey());
+                                                        rec1_uso = true;
+                                                    } 
+                                                }
+                                                h++;
+                                            }
+                                            if(!rec1_uso){
+                                                rc_rec2.put(client_name, Arrays.asList(3, indicacao_tempo_rc2));                                                
+                                            }else{
+                                                fila_rc2.add(client_name);
+                                            }                                                                                        
+                                            mapPlayer.remove(6);
                                         }
                                         
-                                        if(map.containsKey(2)){
-                                            System.out.println("VOlta: ");
-                                            HashMap<String,PublicKey> map2 = (HashMap<String,PublicKey>) map.get(2);
-                                            String client_name = (String)parseHashMsg(1,map2);
-                                            PublicKey keyPublic = (PublicKey)parseHashMsg(2,map2);
+                                        if(map.containsKey(5)){
+                                            System.out.println("Recurso 1");
+                                            HashMap<String,PublicKey> map2 = (HashMap<String,PublicKey>) map.get(5);
+                                            String client_name = (String)parseHashMsg(1,map2);       
                                             
-                                          // verifica a lista das pessoas online, caso a pessoa ainda não esteja na lista, adiciona ela.
-                                                for(int h = 0; h<online.size(); h++){
-                                                    
-                                                    if(online.get(h).equals(client_name)){
-                                                        achou = true;
-                                                    }
+                                            Date date= new Date();
+                                            int indicacao_tempo_rc1 = (int) date.getTime();
+                                            rc_rec1.put(client_name, Arrays.asList(2,indicacao_tempo_rc1));
+                                            int h = 0;
+                                            for(Map.Entry<String, List<Integer>> entry: rc_rec1.entrySet()) {
+                                                if(!client_name.equals(entry.getKey())){
+                                                    if(entry.getValue().get(h).equals(3)){
+                                                        System.out.println("O recurso 1 ja esta sendo usado por " + entry.getKey());
+                                                        rec1_uso = true;
+                                                    } 
                                                 }
-                                                if(!achou){    
-                                                    online.add(client_name);                                                                 
-                                                    nome_chave.put(client_name,keyPublic); 
+                                                h++;
+                                            }
+                                            if(!rec1_uso){
+                                                rc_rec1.put(client_name, Arrays.asList(3, indicacao_tempo_rc1));
+                                                System.out.println(client_name + " esta usando o recurso 1");
+                                            }else{
+                                                fila_rc1.add(client_name);
+                                            }                                                                                        
+                                            mapPlayer.remove(5);
+                                        }
+                                        
+                                        if(map.containsKey(4)){
+                                            System.out.println("Sair");
+                                            HashMap<String,PublicKey> map2 = (HashMap<String,PublicKey>) map.get(4);
+                                            String client_name = (String)parseHashMsg(1,map2);                                            
+                                            for(int o = 0; o < online.size(); o++){
+                                                if(online.get(o).equals(client_name)){                                        
+                                                    System.out.println("deletou o "+ online.get(o));
+                                                    online.remove(o);
+                                                    rc_rec1.remove(client_name);
+                                                    rc_rec2.remove(client_name);
                                                 }
-                                        } 
-                                        if(map.containsKey(3)){
+                                            }
+                                            if(client_name.equals(nome)){
+                                                s.leaveGroup(group);
+                                                sair = true;
+                                            }
+                                            System.out.println(client_name + " saiu");    
+                                                                                                    
+                                        }
+                                        
+                                        
+                                        else if(map.containsKey(3)){
                                             System.out.println("Descriptografar");
                                             HashMap<String,PublicKey> map2 = (HashMap<String,PublicKey>) map.get(3);
                                             String msgCrypto = (String)parseHashMsg(1,map2);
@@ -197,11 +304,60 @@ public class MulticastAp {
                                             System.out.println("Mensagem:: " + new String(message));
                                             
                                            
-                                        }
-                                }else{
-                                            System.out.println("nãodeu");
                                         
+                                        }else if(map.containsKey(2)){
+                                            System.out.println("Volta: ");
+                                            HashMap<String,PublicKey> map2 = (HashMap<String,PublicKey>) map.get(2);
+                                            String client_name = (String)parseHashMsg(1,map2);
+                                            PublicKey keyPublic = (PublicKey)parseHashMsg(2,map2);
+                                            
+                                          // verifica a lista das pessoas online, caso a pessoa ainda não esteja na lista, adiciona ela.
+
+
+                                                for(int h = 0; h < online.size(); h++){
+
+                                                    
+                                                    if(online.get(h).equals(client_name)){
+                                                        achou = true;
+                                                    }
+                                                }
+                                                if(!achou){    
+                                                    online.add(client_name);                                                                 
+                                                    nome_chave.put(client_name,keyPublic); 
+                                                }
+                                         
+                                
+                                            mapPlayer.remove(2);
+                                        }
+                                        
+                                        if(map.containsKey(1)){
+                                           // Receber informações de alguém que entrou no servidor  
+                                            HashMap<String,PublicKey> map2 = (HashMap<String,PublicKey>) map.get(1);
+                                            String client_name = (String)parseHashMsg(1,map2);
+                                            PublicKey keyPublic = (PublicKey)parseHashMsg(2,map2);
+                                            nome_chave.put(client_name, keyPublic);
+                                            System.out.println(client_name + " entrou");
+                                            //prepara informações para enviar as minhas informações para o grupo para todos terem
+                                            mapPlayer.put(2, getMyInfo());
+                                            online.add(client_name);
+                                            rc_rec1.put(client_name, Arrays.asList(1,0));
+                                            rc_rec2.put(client_name, Arrays.asList(1,0));
+                                            byte[] msgVolta = serialize(mapPlayer);
+                                            s.send(getDatagram(msgVolta, group));
+                                            
+                                        }                                                                                                                                                                                                                                                                                                                                                                        
+                                    }
+                                
+                                
+                                if(online.size() == 3){
+                                    inicio = true;
                                 }
+                                
+                                if(online.isEmpty()){
+                                    sair = true;
+                                }
+                                
+
                                 System.out.println("\n\n\n\n");
                                 //System.out.println("Online: ");
                                 //System.out.println("MAP : " +nome_chave.toString());
@@ -210,7 +366,7 @@ public class MulticastAp {
                                 System.out.println("se fude" + ex);
                             }
                             
-                            
+                           
                             if(nome.contains("juca")){
                                     System.out.println("Aguradndao mensagem: ");             
                                     Scanner reader2 = new Scanner(System.in); 
@@ -237,7 +393,41 @@ public class MulticastAp {
                                     s.send(getDatagram(msg, group));
                                 
                             }
-                        }while(opcao != 4);
+                        
+                            if(inicio && !sair){
+                                    cleanBuffer(buffer);                                    
+                                    menu();                                    
+                                    System.out.println("Escolha a opção mensagem: ");             
+                                    Scanner reader2 = new Scanner(System.in); 
+                                    opcao = reader2.nextInt();
+                                    switch(opcao){
+                                        case 1:
+                                            System.out.println("case 1 ");
+                                            mapPlayer.put(5, getMyInfo());
+                                            byte[] msgRec1 = serialize(mapPlayer);
+                                            s.send(getDatagram(msgRec1, group));                                                                                                                                
+                                        case 2:
+                                            mapPlayer.put(6, getMyInfo());
+                                            byte[] msgRec2 = serialize(mapPlayer);
+                                            s.send(getDatagram(msgRec2, group));                                                                                                                                
+                                        case 3:
+                                            break;
+                                        case 4:
+                                            mapPlayer.put(4, getMyInfo());
+                                            byte[] msgSaida = serialize(mapPlayer);
+                                            s.send(getDatagram(msgSaida, group));                                                                                                                                
+                                    }                                                                       
+                                
+                            }
+                            System.out.println("Estao online: \n");
+                            for(int h = 0; h<online.size(); h++){
+                                System.out.println(online.get(h));
+                            }
+                            System.out.println("----------");   
+                                
+                            
+                        }while(!sair);
+
                         /*String mensagem = nome + "id;" + pub_key.toString();
                         
                                                 
@@ -375,4 +565,7 @@ public class MulticastAp {
 	}		      	
 
     
+
 }
+
+
