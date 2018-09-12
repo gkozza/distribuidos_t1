@@ -108,6 +108,7 @@ public  byte[] encriptarComChavePrivada(byte[] mensagem, PrivateKey privateKey) 
     public  byte[] decriptarComChavePublica(byte[] msgEncriptada, PublicKey publicKey) {
         byte[] cipherData = null;
         try {
+            System.out.println("Mensagem cryptooo:::    "+msgEncriptada.toString());
             Cipher cipher = Cipher.getInstance("RSA");
             cipher.init(Cipher.DECRYPT_MODE, publicKey);
             cipherData = cipher.doFinal(msgEncriptada);

@@ -25,6 +25,7 @@ import java.util.Map.Entry;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.xml.bind.DatatypeConverter;
 
 /**
  *
@@ -182,14 +183,18 @@ public class MulticastAp {
                                         } 
                                         if(map.containsKey(3)){
                                             System.out.println("Descriptografar");
-                                            HashMap<String,PublicKey> map2 = (HashMap<String,PublicKey>) map.get(2);
+                                            HashMap<String,PublicKey> map2 = (HashMap<String,PublicKey>) map.get(3);
                                             String msgCrypto = (String)parseHashMsg(1,map2);
                                             PublicKey keyPublic = (PublicKey)parseHashMsg(2,map2);
-                                            byte[] msgCryptografada = key.decriptarComChavePublica(msgCrypto.getBytes(), keyPublic);
+                                            byte[] msgCripto = DatatypeConverter.parseBase64Binary(msgCrypto);
                                             
-                                            String naaame = new String(msgCryptografada);
+                                            
+                                            byte[] message= key.decriptarComChavePublica(msgCripto, keyPublic);
+                                                                                
+                                            
+                                            
                                             System.out.println("\n");
-                                            System.out.println("Mensagem:: " + msgCryptografada);
+                                            System.out.println("Mensagem:: " + new String(message));
                                             
                                            
                                         }
@@ -213,10 +218,19 @@ public class MulticastAp {
                                     chat = chat;
                                     
                                     byte[] chat_byte = key.encriptarComChavePrivada(chat.getBytes(), key.getPriv());
-                                    
-                                    
+                                    byte[] mensagem = key.decriptarComChavePublica(chat_byte, key.getPub());
+                                
                                     HashMap<String, PublicKey> hashMsgCrypto = new HashMap<String, PublicKey>();
-                                    hashMsgCrypto.put(chat_byte.toString(), myKeyPublic);
+                                    
+                                    
+                                    String msgCripto = DatatypeConverter.printBase64Binary(chat_byte);
+                                
+                                    byte[] msgByte = DatatypeConverter.parseBase64Binary(msgCripto);
+                                    
+                                
+                                    hashMsgCrypto.put(msgCripto, myKeyPublic);
+                                    
+                                    
                                     mapPlayer.put(3, hashMsgCrypto);
                                     byte [] msg = serialize(mapPlayer);
                                     
